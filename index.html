@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Endecweave</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+<script src="https://unpkg.com/arweave/bundles/web.bundle.js"></script>
+<script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" crossorigin="anonymous"></script>
+<script src="endec.js"></script>
+</head>
+
+<style>
+
+#loading{
+	display:none;
+}
+
+</style>
+
+<body>
+
+<div class="container">
+	<div class="container-end">
+		<center><br/><br/><br/><br/>
+			<img src="endec.png"><br/>
+			<p>Encrypt, decrypt your text, and save permanently to Arweave</p><br/>
+			
+			<p style="font-size:12px;font-weight:bold;font-style:italic;"><span id="add"></span><br/><span id="bal"></span></p>
+			<input type="file" accept=".JSON" id="fileKey" onsubmit="readWallet()" style="display: none;"/>
+			<center><input type="button" id="file" name="uploadDompet" value="Click Here to Load Your Wallet" onclick="upload()" class="btn btn-outline-dark"></center>
+			<strong><p id="loading">Waiting . . . .</p></strong>
+			
+			<div id="homepage" style="display:none;">
+				<button type="button" class="btn btn-outline-dark" onclick="openencrypttab()">Encrypt</button>
+				<button type="button" class="btn btn-outline-dark" onclick="opendecrypttab()">Decrypt</button>
+				<button type="button" class="btn btn-outline-dark" onclick="openLastTransactions()">See your encrypted text saved</button>
+			</div>
+			
+			<div id="encrypt-page" style="margin-top:20px;display:none;max-width:700px;">
+					<h4><span class="badge badge-secondary">Encrypt text</span><h4>
+
+					<input type="text" class="form-control" id="text-encrypt" placeholder="Enter your text" style="margin-bottom:10px;">
+					<input type="text" class="form-control" id="password-encrypt" placeholder="Enter your password"><br/>
+					<h4><span class="badge badge-secondary">Result</span><h4>
+					<div class="alert alert-dark" role="alert" id="encryptresult" style="font-size:14px;max-width:700px;word-wrap: break-word;">
+					  
+					</div>
+					<div id="success-notif" class="alert alert-success" role="alert" style="font-size:14px;display:none;">
+					  Your encrypted text has been saved in Arweave storage. This takes a few minutes.
+					</div>
+					<div id="failed-notif" class="alert alert-danger" role="alert" style="font-size:14px;display:none;">
+					  You need to add balance !
+					</div>
+					<div id="blank-notif" class="alert alert-danger" role="alert" style="font-size:14px;display:none;">
+					  Please fill in the fields.
+					</div>
+					<button type="submit" class="btn btn-outline-secondary" onclick="encryptback()">Back</button>
+					<button type="submit" class="btn btn-outline-danger" onclick="encryptreset()">Reset</button>
+				    <button type="submit" class="btn btn-outline-dark" onclick="encrypt()">Encrypt</button>
+					<button type="submit" class="btn btn-outline-success" onclick="save()">Save</button>
+				
+			</div>
+			
+			<div id="decrypt-page" style="margin-top:20px;display:none;max-width:700px;">
+					<h4><span class="badge badge-secondary">Decrypt text</span><h4>
+
+					<input type="text" class="form-control" id="text-decrypt" placeholder="Enter your text" style="margin-bottom:10px;">
+					<input type="text" class="form-control" id="password-decrypt" placeholder="Enter your password"><br/>
+					<h4><span class="badge badge-secondary">Result</span><h4>
+					<div class="alert alert-dark" role="alert" id="decryptresult" style="font-size:14px;max-width:700px;word-wrap: break-word;">
+					  
+					</div>
+					<div id="blank-notif2" class="alert alert-danger" role="alert" style="font-size:14px;display:none;">
+					  Please fill in the fields.
+					</div>
+					<button type="submit" class="btn btn-outline-secondary" onclick="decryptback()">Back</button>
+					<button type="submit" class="btn btn-outline-danger" onclick="decryptreset()">Reset</button>
+				    <button type="submit" class="btn btn-outline-dark" onclick="decrypt()">Decrypt</button>
+					
+				
+			</div>
+			
+			<div id="saved-page" style="margin-top:20px;display:block;max-width:700px;display:none;">
+					<button type="submit" class="btn btn-outline-secondary" onclick="savedback()">Back</button>
+					<h4><span class="badge badge-secondary">Last Decrypt Text Saved</span><h4><br/>
+					<div id="viewTrx">
+						
+					</div>
+					
+					
+				
+			</div>
+			
+		</center>
+		
+	</div>
+</div>
+
+<script>
+
+const arweave = Arweave.init({host:"arweave.net",port:443,logging:!0,protocol:"https"});
+var jwk;
+var arweave_address;
+var balanceNow;
+
+function upload(){
+	$("#fileKey").click();
+	readWallet();
+}
+
+function readWallet(){
+
+	const input = document.getElementById('fileKey');
+                if (input) {
+                    input.addEventListener('change', function () {
+                        const reader = new FileReader();
+                        reader.addEventListener('load', function(e) {
+                            jwk = e.target.result;
+                        });
+                        reader.onload = function() {
+                            document.getElementById('loading').style.display = 'block';
+							document.getElementById('file').style.display = 'none';
+                            jwk = JSON.parse(jwk);
+                            arweave.wallets.jwkToAddress(jwk).then((address) => {
+                                arweave_address = address;
+                                arweave.wallets.getBalance(arweave_address).then((balance) => {
+                                    try {
+                                        let wallet_balance = arweave.ar.winstonToAr(balance);
+										
+										document.getElementById('file').style.display = 'none';
+										document.getElementById('loading').style.display = 'none';
+										document.getElementById('homepage').style.display = 'block';
+										document.getElementById("add").innerText="Addr: "+arweave_address;
+									
+                                        var myballance = arweave.ar.winstonToAr(balance);
+										balanceNow = arweave.ar.winstonToAr(balance);
+										document.getElementById("bal").innerText=myballance+" AR";
+   
+                                    } catch(err) {
+                                        console.log(err);
+                                    }
+
+                                });
+                            });
+                        }
+                        reader.readAsText(input.files[0]);
+
+                    }, false);
+                }
+}
+
+function openencrypttab(){
+	document.getElementById('homepage').style.display = 'none';
+	document.getElementById('encrypt-page').style.display = 'block';
+}
+
+function opendecrypttab(){
+	document.getElementById('homepage').style.display = 'none';
+	document.getElementById('decrypt-page').style.display = 'block';
+}
+
+function encryptback(){
+	document.getElementById('homepage').style.display = 'block';
+	document.getElementById('encrypt-page').style.display = 'none';
+	document.getElementById('failed-notif').style.display = 'none';
+	document.getElementById('success-notif').style.display = 'none';
+}
+
+function decryptback(){
+	document.getElementById('homepage').style.display = 'block';
+	document.getElementById('decrypt-page').style.display = 'none';
+}
+
+function savedback(){
+	document.getElementById('homepage').style.display = 'block';
+	document.getElementById('saved-page').style.display = 'none';
+}
+
+function encryptreset(){
+	document.getElementById('text-encrypt').value = "";
+	document.getElementById('password-encrypt').value = "";
+	document.getElementById("encryptresult").innerText = "";
+	document.getElementById('failed-notif').style.display = 'none';
+	document.getElementById('success-notif').style.display = 'none';
+	document.getElementById('blank-notif').style.display = 'none';
+}
+
+function decryptreset(){
+	document.getElementById('text-decrypt').value = "";
+	document.getElementById('password-decrypt').value = "";
+	document.getElementById("decryptresult").innerText = "";
+	document.getElementById('blank-notif2').style.display = 'none';
+}
+
+function encrypt(){
+	document.getElementById('failed-notif').style.display = 'none';
+	document.getElementById('blank-notif').style.display = 'none';
+	document.getElementById('success-notif').style.display = 'none';
+	var aaa = document.getElementById('text-encrypt').value;
+	var bbb = document.getElementById('password-encrypt').value;
+	
+	if(aaa === '' || bbb === ''){
+		document.getElementById('blank-notif').style.display = 'block';
+	}else{
+		var ccc = CryptoJS.AES.encrypt(aaa, bbb);
+        var resultaaa = ccc.toString();
+		document.getElementById("encryptresult").innerText=resultaaa;
+	}
+}
+
+function decrypt(){
+	document.getElementById('blank-notif2').style.display = 'none';
+	var mmm = document.getElementById('text-decrypt').value;
+	var nnn = document.getElementById('password-decrypt').value;
+	
+	if(mmm === '' || nnn === ''){
+		document.getElementById('blank-notif2').style.display = 'block';
+	}else{
+		var ppp = CryptoJS.AES.decrypt(mmm, nnn);
+        var resultmmm = ppp.toString(CryptoJS.enc.Utf8);
+		document.getElementById("decryptresult").innerText=resultmmm;
+	}
+}
+
+async function save(){
+	document.getElementById('failed-notif').style.display = 'none';
+	document.getElementById('success-notif').style.display = 'none';
+	document.getElementById('blank-notif').style.display = 'none';
+	var sss = document.getElementById("encryptresult").innerHTML;
+	var ssscheck = sss.substring(0,5);
+	if(ssscheck === 'U2Fsd'){
+		var charsize = (new Blob([sss]).size);
+		var wal = arweave_address;
+		var balnow = balanceNow;
+		let response = await fetch('https://arweave.net/price/'+charsize+'/'+wal+'/');
+		let data = await response.text();
+		let datConv = ( data/1000000000000 );
+		console.log(datConv);
+		
+		if(balnow < datConv){
+			document.getElementById('failed-notif').style.display = 'block';
+		}else{
+			
+			let transaction =  await arweave.createTransaction({
+				  data: sss
+			  }, jwk)
+			  transaction.addTag('Content-Type', 'text/html');
+			  transaction.addTag('applications', 'endecdapp');
+			  
+			  await arweave.transactions.sign(transaction,jwk);
+			  const response = await arweave.transactions.post(transaction);
+			  
+			  console.log(response);
+			  console.log(transaction.id);
+			  document.getElementById('success-notif').style.display = 'block';
+			  
+			  
+		}
+		
+	}else{
+		document.getElementById('blank-notif').style.display = 'block';
+	}
+	
+
+}
+
+
+async function openLastTransactions(){
+	document.getElementById("viewTrx").innerText="";
+	document.getElementById('homepage').style.display = 'none';
+	document.getElementById('saved-page').style.display = 'block';
+	 var twal = arweave_address;
+	 const trx = await arweave.arql({
+              op: "and",
+              expr1: {
+                op: "equals",
+                expr1: "from",
+                expr2: twal
+              },
+              expr2: {
+                op: "equals",
+                  expr1: "applications",
+                  expr2: "endecdapp"
+                
+              }
+        })
+
+		var viewTrx = ''
+		trx.forEach(async function(item){
+		
+				const arweave = Arweave.init({host:"arweave.net",port:443,logging:!0,protocol:"https"});	
+				arweave.transactions.getData(item, {decode: true, string: true}).then(data => {
+				  console.log(data);
+				  
+				  viewTrx += '<div style="word-wrap:break-word;font-size:14px;border:solid 1px black;padding:5px;margin-bottom:8px;">'+data+'</div>';
+				  document.getElementById("viewTrx").innerHTML = viewTrx;
+				  
+				});
+				
+				
+		
+		});
+}
+
+</script>
+</body>
+</html>
